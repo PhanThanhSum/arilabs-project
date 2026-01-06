@@ -1,21 +1,20 @@
 package com.example.testapi;
 
+import com.google.gson.*;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
-import com.google.gson.*;
-
-public class TestApi {
-
+public class TestApiAirport {
     public static void main(String[] args) {
         try {
             String API_KEY = "3dabb7ef-783d-4518-adc5-9285f232ba17";
-            String CONTINENTS = "AS";
-            String url = "https://airlabs.co/api/v9/countries"
+            String COUNTRY_CODE = "VN";
+            String url = "https://airlabs.co/api/v9/airports"
                     + "?api_key=" + API_KEY
-                    + "&continent=" + CONTINENTS;
+                    + "&country_code=" + COUNTRY_CODE;
 
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()

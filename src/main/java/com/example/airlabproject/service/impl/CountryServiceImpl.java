@@ -34,17 +34,6 @@ public class CountryServiceImpl implements CountryService {
     }
 
     @Override
-    public CountryDTO create(CountryDTO dto) {
-        Optional<Continent> continentOpt = continentRepository.findById(dto.getContinentId());
-        if (continentOpt.isEmpty()) {
-            throw new IllegalArgumentException("Continent not found: " + dto.getContinentId());
-        }
-        Country country = new Country(dto.getCode(), dto.getCode3(), dto.getName(), continentOpt.get());
-        countryRepository.save(country);
-        return dto;
-    }
-
-    @Override
     public List<CountryDTO> getAll() {
         return countryRepository.findAll()
                 .stream()

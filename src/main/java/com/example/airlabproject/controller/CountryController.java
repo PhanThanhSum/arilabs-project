@@ -15,11 +15,6 @@ public class CountryController {
         this.countryService = countryService;
     }
 
-    @PostMapping
-    public CountryDTO create(@RequestBody CountryDTO dto) {
-        return countryService.create(dto);
-    }
-
     @GetMapping
     public List<CountryDTO> getAll() {
         return countryService.getAll();
