@@ -36,7 +36,6 @@ public class TestApi {
 
             for (JsonElement element : countries) {
                 JsonObject country = element.getAsJsonObject();
-                String code = country.get("code").getAsString();
 
                 System.out.println(
                         new GsonBuilder()
