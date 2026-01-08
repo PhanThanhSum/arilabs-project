@@ -15,7 +15,6 @@ public class AirlabController {
     @GetMapping
     public String getHomePage() {
         System.out.println(apiKeyAirlabs);
-        System.out.println(apiKeyAirlabs);
         return "index";
     }
 }
