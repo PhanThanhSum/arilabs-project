@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface AirportService {
     List<AirportDTO> getAll();
+    int setAll();
 }

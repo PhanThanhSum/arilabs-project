@@ -3,6 +3,7 @@ package com.example.airlabproject.controller;
 import com.example.airlabproject.dto.AirportDTO;
 import com.example.airlabproject.service.AirportService;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -21,5 +22,10 @@ public class AirportController {
     @GetMapping
     public List<AirportDTO> getAll(){
         return airportService.getAll();
+    }
+
+    @PostMapping("/set-all")
+    public int setAll(){
+        return airportService.setAll();
     }
 }
