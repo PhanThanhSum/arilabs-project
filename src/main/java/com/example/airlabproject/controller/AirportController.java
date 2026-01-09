@@ -17,7 +17,10 @@ public class AirportController {
 
 
     @GetMapping
-    public List<AirportDTO> getAll(){
+    public List<AirportDTO> getAll(@RequestParam(value = "country_code", required = false) String countryCode) {
+        if (countryCode != null && !countryCode.isBlank()) {
+            return airportService.getByCountryCode(countryCode);
+        }
         return airportService.getAll();
     }
 

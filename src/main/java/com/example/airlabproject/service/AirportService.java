@@ -40,7 +40,7 @@ public class AirportService {
     public List<AirportDTO> getByCountryCode(String countryCode){
         return airportRepository.findAllByParentCountry_Code(countryCode)
                 .stream()
-                .map(c -> new AirportDTO(c.getIataCode(), c.getName(), c.getIcaoCode(), c.getLat(), c.getLng(), c.getParentCountry() != null ? c.getParentCountry().getCode() : null))
+                .map(c -> new AirportDTO(c.getIataCode(), c.getName(), c.getIcaoCode(), c.getLat(), c.getLng(), c.getCountryCode() != null ? c.getCountryCode() : null))
                 .collect(Collectors.toList());
     }
 
