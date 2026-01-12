@@ -6,9 +6,6 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -79,7 +76,6 @@ public class FlightService {
                 }
             }
 
-            // 3. Xóa cache cũ và Lưu mới vào DB
             flightRepository.deleteByDepIata(airportCode);
             return flightRepository.saveAll(flightList);
 
