@@ -110,8 +110,9 @@ public class FlightScheduleService {
             }
 
             // Refresh cache for this departure airport
-            flightRepository.deleteByDepIata(airportCode);
-            return flightRepository.saveAll(flightList);
+//            flightRepository.deleteByDepIata(airportCode);
+//            return flightRepository.saveAll(flightList);
+            return null;
 
         } catch (Exception e) {
             // Log minimal; return empty list on error

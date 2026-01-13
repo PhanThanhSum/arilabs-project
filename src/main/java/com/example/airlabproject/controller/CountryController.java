@@ -25,6 +25,7 @@ public class CountryController {
 
     @PostMapping("/set-all")
     public int setAll() {
-        return countryService.setAll();
+//        return countryService.setAll();
+        return 0;
     }
 }
