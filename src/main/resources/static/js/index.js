@@ -61,14 +61,6 @@ async function loadAirportsForCountry(countryCode) {
     try {
         let airports = await fetchJSON('/api/airports?country_code=' + encodeURIComponent(countryCode));
 
-        // Nếu chưa có sân bay, gọi API set (giả lập logic crawl/save data của bạn)
-        if (!airports || airports.length === 0) {
-            // Thông báo cho người dùng biết đang xử lý thêm bước phụ (nếu cần thiết)
-            helper.textContent = 'Đang đồng bộ dữ liệu lần đầu...';
-            await fetch('/api/airports/set/' + encodeURIComponent(countryCode), { method: 'POST' });
-            airports = await fetchJSON('/api/airports?country_code=' + encodeURIComponent(countryCode));
-        }
-
         airportSelect.innerHTML = '<option value="">-- Chọn sân bay --</option>';
         airports.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 

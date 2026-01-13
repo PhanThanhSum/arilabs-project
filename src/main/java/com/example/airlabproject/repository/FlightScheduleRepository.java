@@ -15,4 +15,6 @@ public interface FlightScheduleRepository extends JpaRepository<FlightSchedule, 
     List<FlightSchedule> findByDepIataAndCreatedAtAfter(String depIata, LocalDateTime timeThreshold);
 
     List<FlightSchedule> findByDepIata(String depIata);
+
+    void deleteByDepIata(String depIata);
 }
