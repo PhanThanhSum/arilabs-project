@@ -9,6 +9,7 @@ import com.google.gson.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -30,39 +31,44 @@ public class AirportService {
         this.airportRepository = airportRepository;
     }
 
-    public List<AirportDTO> getAll() {
-        return airportRepository.findAll()
-                .stream()
-                .map(c -> new AirportDTO(c.getIataCode(), c.getName(), c.getIcaoCode(), c.getLat(), c.getLng(), c.getCountry() != null ? c.getCountry().getCode() : null))
-                .collect(Collectors.toList());
-    }
-
     public List<AirportDTO> getByCountryCode(String countryCode) {
-        List<Airport> list = airportRepository.findAllByParentCountry_Code(countryCode);
-        if (list == null || list.isEmpty()) {
-            saveByCountryCode(countryCode);
-            list = airportRepository.findAllByParentCountry_Code(countryCode);
+        List<Airport> airports = airportRepository.findAllByCountry_Code(countryCode);
+
+        if (airports.isEmpty()) {
+            List<Airport> savedAirport = fetchAndSaveByCountryCode(countryCode);
+            return savedAirport
+                    .stream()
+                    .map(c -> new AirportDTO(
+                            c.getIataCode(),
+                            c.getName(),
+                            c.getIcaoCode(),
+                            c.getLat(),
+                            c.getLng(),
+                            c.getCountry() != null ? c.getCountry().getCode() : null
+                    ))
+                    .collect(Collectors.toList());
         }
-        return list.stream()
+
+        return airportRepository.findAllByCountry_Code(countryCode)
+                .stream()
                 .map(c -> new AirportDTO(
                         c.getIataCode(),
                         c.getName(),
                         c.getIcaoCode(),
                         c.getLat(),
                         c.getLng(),
-                        c.getParentCountry() != null ? c.getParentCountry().getCode() : null
+                        c.getCountry() != null ? c.getCountry().getCode() : null
                 ))
                 .collect(Collectors.toList());
     }
 
-    public List<Airport> fetchAndSaveByCountryCode(String countryCode) {
+    private List<Airport> fetchAndSaveByCountryCode(String countryCode) {
         if (countryCode == null || countryCode.isBlank()) return null;
 
         Country countryRef = countryRepository.findById(countryCode).orElse(null);
         if (countryRef == null) return null;
 
         HttpClient client = HttpClient.newHttpClient();
-        Gson gson = new GsonBuilder().create();
 
         String url = "https://airlabs.co/api/v9/airports?api_key=" + airlabsApiKey + "&country_code=" + countryCode;
         try {
@@ -84,11 +90,11 @@ public class AirportService {
                 String name = obj.has("name") && !obj.get("name").isJsonNull() ? obj.get("name").getAsString() : null;
                 String icao = obj.has("icao_code") && !obj.get("icao_code").isJsonNull() ? obj.get("icao_code").getAsString() : null;
 
-                java.math.BigDecimal lat = null;
-                java.math.BigDecimal lng = null;
+                BigDecimal lat = null;
+                BigDecimal lng = null;
                 if (obj.has("lat") && !obj.get("lat").isJsonNull()) {
                     try {
-                        lat = java.math.BigDecimal.valueOf(obj.get("lat").getAsDouble());
+                        lat = BigDecimal.valueOf(obj.get("lat").getAsDouble());
                     } catch (Exception ignored) {
                     }
                 }

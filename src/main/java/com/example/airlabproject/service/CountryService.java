@@ -42,14 +42,6 @@ public class CountryService {
     @Value("${api-key-airlabs}")
     private String airlabsApiKey;
 
-
-    public List<CountryDTO> getAll() {
-        return countryRepository.findAll()
-                .stream()
-                .map(c -> new CountryDTO(c.getCode(), c.getCode3(), c.getName(), c.getContinent() != null ? c.getContinent().getId() : null))
-                .collect(Collectors.toList());
-    }
-
     public List<CountryDTO> getByContinentId(String continentId) {
         if (continentId == null || continentId.isBlank()) return null;
 
@@ -68,42 +60,30 @@ public class CountryService {
                 .collect(Collectors.toList());
     }
 
-    public int saveAllFromAirlabs() {
-        List<Continent> continents = continentRepository.findAll();
-        if (continents.isEmpty()) return 0;
+    private List<Country> fetchAndSaveCountriesByContinent(String continentId) {
+        String url = String.format("https://airlabs.co/api/v9/countries?api_key=%s&continent=%s", airlabsApiKey, continentId);
 
-        int saved = 0;
-        HttpClient client = HttpClient.newHttpClient();
-        Gson gson = new GsonBuilder().create();
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .GET()
+                    .build();
 
-        for (Continent continent : continents) {
-            String url = "https://airlabs.co/api/v9/countries?api_key=" + airlabsApiKey + "&continent=" + continent.getId();
-            try {
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(url))
-                        .GET()
-                        .build();
-                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-                JsonObject root = JsonParser.parseString(response.body()).getAsJsonObject();
-                JsonArray countries = root.getAsJsonArray("response");
-                if (countries == null) continue;
+            // 1. Kiểm tra HTTP Status
+            if (response.statusCode() != 200) {
+                log.error("API Error: Status Code {} - Body: {}", response.statusCode(), response.body());
+                return null;
+            }
 
-                List<Country> batch = new ArrayList<>();
-                for (JsonElement element : countries) {
-                    JsonObject obj = element.getAsJsonObject();
-                    String code = obj.has("code") && !obj.get("code").isJsonNull() ? obj.get("code").getAsString() : null;
-                    String code3 = obj.has("code3") && !obj.get("code3").isJsonNull() ? obj.get("code3").getAsString() : null;
-                    String name = obj.has("name") && !obj.get("name").isJsonNull() ? obj.get("name").getAsString() : null;
-                    if (code == null || name == null) continue;
-                    batch.add(new Country(code, code3, name, continent));
-                }
-                if (!batch.isEmpty()) {
-                    countryRepository.saveAll(batch);
-                    saved += batch.size();
-                }
-            } catch (Exception e) {
-                // Skip this continent on error
+            // 2. Parse JSON
+            JsonObject root = JsonParser.parseString(response.body()).getAsJsonObject();
+
+            // Kiểm tra xem key "response" có tồn tại và là mảng không
+            if (!root.has("response") || !root.get("response").isJsonArray()) {
+                log.warn("API response does not contain valid data for continent: {}", continentId);
+                return null;
             }
 
             JsonArray dataArray = root.getAsJsonArray("response");

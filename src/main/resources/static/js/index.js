@@ -24,14 +24,14 @@ async function loadCountriesAsia() {
 
     // Bật loading
     setLoading(true, 'countrySelect', 'countrySpinner');
-    countrySelect.innerHTML = '<option value="">-- Đang tải dữ liệu... --</option>';
+    countrySelect.innerHTML = '<option value="">-- Loading data... --</option>';
 
     try {
         const countries = await fetchJSON('/api/countries?continent_id=AS');
         countries.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
         // Xóa text "Đang tải" và thêm option mặc định
-        countrySelect.innerHTML = '<option value="">-- Chọn quốc gia --</option>';
+        countrySelect.innerHTML = '<option value="">-- Select a country --</option>';
 
         for (const c of countries) {
             const opt = document.createElement('option');
@@ -41,7 +41,7 @@ async function loadCountriesAsia() {
         }
     } catch (e) {
         console.error('Failed to load countries', e);
-        countrySelect.innerHTML = '<option value="">Lỗi tải dữ liệu</option>';
+        countrySelect.innerHTML = '<option value="">Error loading data</option>';
     } finally {
         // Tắt loading dù thành công hay thất bại
         setLoading(false, 'countrySelect', 'countrySpinner');
@@ -50,22 +50,18 @@ async function loadCountriesAsia() {
 
 // --- CẬP NHẬT HÀM LOAD SÂN BAY ---
 async function loadAirportsForCountry(countryCode) {
-  const airportSelect = document.getElementById('airportSelect');
-  const helper = document.getElementById('airportHelper');
-  airportSelect.innerHTML = '<option value="">-- Đang tải sân bay... --</option>';
-  helper.textContent = '';
-  try {
-    const airports = await fetchJSON('/api/airports?country_code=' + encodeURIComponent(countryCode));
+    const airportSelect = document.getElementById('airportSelect');
+    const helper = document.getElementById('airportHelper');
 
     // Reset và Bật loading
     helper.textContent = '';
-    airportSelect.innerHTML = '<option value="">-- Đang tải sân bay... --</option>';
+    airportSelect.innerHTML = '<option value="">-- Loading airports... --</option>';
     setLoading(true, 'airportSelect', 'airportSpinner');
 
     try {
         let airports = await fetchJSON('/api/airports?country_code=' + encodeURIComponent(countryCode));
 
-        airportSelect.innerHTML = '<option value="">-- Chọn sân bay --</option>';
+        airportSelect.innerHTML = '<option value="">-- Select an airport --</option>';
         airports.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
         for (const a of airports) {
@@ -77,14 +73,14 @@ async function loadAirportsForCountry(countryCode) {
         }
 
         if (airports.length === 0) {
-            helper.textContent = 'Không tìm thấy sân bay cho quốc gia này.';
+            helper.textContent = 'No airports found for this country.';
         } else {
             helper.textContent = ''; // Xóa thông báo cũ nếu thành công
         }
 
     } catch (e) {
-        airportSelect.innerHTML = '<option value="">-- Lỗi tải sân bay --</option>';
-        helper.textContent = 'Có lỗi khi tải danh sách sân bay.';
+        airportSelect.innerHTML = '<option value="">-- Error loading airports --</option>';
+        helper.textContent = 'An error occurred while loading the airport list.';
         console.error('Failed to load airports', e);
     } finally {
         // Tắt loading
@@ -96,7 +92,7 @@ async function loadAirportsForCountry(countryCode) {
 function onCountryChange(ev) {
     const countryCode = ev.target.value;
     const airportSelect = document.getElementById('airportSelect');
-    airportSelect.innerHTML = '<option value="">-- Vui lòng chọn quốc gia trước --</option>';
+    airportSelect.innerHTML = '<option value="">-- Please select a country first --</option>';
     if (countryCode) {
         loadAirportsForCountry(countryCode);
     }
@@ -112,7 +108,7 @@ function renderFlights(flights) {
   if (!flights || flights.length === 0) {
     const warn = document.createElement('div');
     warn.className = 'alert alert-warning';
-    warn.textContent = 'Không tìm thấy chuyến bay nào hoặc API hết hạn mức.';
+    warn.textContent = 'No flights found or API rate limit exceeded.';
     card.appendChild(warn);
     container.appendChild(card);
     return;
@@ -123,15 +119,15 @@ function renderFlights(flights) {
   table.innerHTML = `
     <thead>
       <tr>
-        <th>Hãng (IATA)</th>
-        <th>Chuyến bay (IATA)</th>
-        <th>Đi (IATA)</th>
-        <th>Giờ đi</th>
-        <th>Giờ đi UTC</th>
-        <th>Đến (IATA)</th>
-        <th>Giờ đến</th>
-        <th>Giờ đến UTC</th>
-        <th>Trạng thái</th>
+        <th>Airline (IATA)</th>
+        <th>Flight (IATA)</th>
+        <th>Departure (IATA)</th>
+        <th>Departure Time</th>
+        <th>Departure Time UTC</th>
+        <th>Arrival (IATA)</th>
+        <th>Arrival Time</th>
+        <th>Arrival Time UTC</th>
+        <th>Status</th>
       </tr>
     </thead>
     <tbody></tbody>`;
