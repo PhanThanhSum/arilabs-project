@@ -24,7 +24,7 @@ async function loadCountriesAsia() {
 
     // Bật loading
     setLoading(true, 'countrySelect', 'countrySpinner');
-    countrySelect.innerHTML = '<option value="">-- Loading data... --</option>';
+    countrySelect.innerHTML = '<option value="">-- Đang tải dữ liệu... --</option>';
 
     try {
         const countries = await fetchJSON('/api/countries?continent_id=AS');
