@@ -40,10 +40,68 @@ public class CountryService {
 
     public List<CountryDTO> getByContinentId(String continentId) {
         if (continentId == null || continentId.isBlank()) return getAll();
-        return countryRepository.findAllByContinent_Id(continentId)
-                .stream()
-                .map(c -> new CountryDTO(c.getCode(), c.getCode3(), c.getName(), c.getContinent() != null ? c.getContinent().getId() : null))
+
+        List<Country> list = countryRepository.findAllByContinent_Id(continentId);
+        if (list == null || list.isEmpty()) {
+            saveByContinentId(continentId);
+            list = countryRepository.findAllByContinent_Id(continentId);
+        }
+
+        return list.stream()
+                .map(c -> new CountryDTO(
+                        c.getCode(),
+                        c.getCode3(),
+                        c.getName(),
+                        c.getContinent() != null ? c.getContinent().getId() : null
+                ))
                 .collect(Collectors.toList());
+    }
+
+    public int saveByContinentId(String continentId) {
+        if (continentId == null || continentId.isBlank()) return 0;
+
+        Continent continentRef = continentRepository.findById(continentId).orElse(null);
+        if (continentRef == null) return 0; // require existing continent (FK constraint)
+
+        int saved = 0;
+        HttpClient client = HttpClient.newHttpClient();
+        Gson gson = new GsonBuilder().create();
+
+        String url = "https://airlabs.co/api/v9/countries?api_key=" + airlabsApiKey + "&continent=" + continentId;
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .GET()
+                    .build();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            JsonObject root = JsonParser.parseString(response.body()).getAsJsonObject();
+            JsonArray countries = root.getAsJsonArray("response");
+            if (countries == null) return 0;
+
+            List<Country> batch = new ArrayList<>();
+            for (JsonElement element : countries) {
+                JsonObject obj = element.getAsJsonObject();
+
+                String code = obj.has("code") && !obj.get("code").isJsonNull() ? obj.get("code").getAsString() : null;
+                String code3 = obj.has("code3") && !obj.get("code3").isJsonNull() ? obj.get("code3").getAsString() : null;
+                String name = obj.has("name") && !obj.get("name").isJsonNull() ? obj.get("name").getAsString() : null;
+
+                if (code == null || name == null) continue;
+
+                Country country = new Country(code, code3, name, continentRef);
+                batch.add(country);
+            }
+
+            if (!batch.isEmpty()) {
+                countryRepository.saveAll(batch);
+                saved = batch.size();
+            }
+        } catch (Exception e) {
+            // ignore and return what we have
+        }
+
+        return saved;
     }
 
     public int saveAllFromAirlabs() {

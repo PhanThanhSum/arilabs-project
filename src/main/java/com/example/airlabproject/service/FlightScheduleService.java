@@ -1,6 +1,5 @@
 package com.example.airlabproject.service;
 
-import com.example.airlabproject.dto.CountryDTO;
 import com.example.airlabproject.dto.FlightScheduleDTO;
 import com.example.airlabproject.entity.FlightSchedule;
 import com.example.airlabproject.repository.FlightScheduleRepository;

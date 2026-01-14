@@ -11,28 +11,28 @@
 <body>
 
 <div class="container">
-    <h2 class="text-center mb-4">✈️ Tra cứu lịch bay (Châu Á)</h2>
+    <h2 class="text-center mb-4">✈️ Flight Schedule</h2>
 
     <div class="card p-4">
         <form id="searchForm">
             <div class="row">
                 <div class="col-md-5">
-                    <label class="form-label">Chọn Quốc Gia:</label>
+                    <label class="form-label">Select Country:</label>
                     <select id="countrySelect" class="form-select">
-                        <option value="">-- Đang tải danh sách... --</option>
+                        <option value="">-- Loading list... --</option>
                     </select>
                 </div>
 
                 <div class="col-md-5">
-                    <label class="form-label">Chọn Sân Bay:</label>
+                    <label class="form-label">Select Airport:</label>
                     <select id="airportSelect" name="airportCode" class="form-select" required>
-                        <option value="">-- Vui lòng chọn quốc gia trước --</option>
+                        <option value="">-- Please select a country first --</option>
                     </select>
                     <div id="airportHelper" class="form-text"></div>
                 </div>
 
                 <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">Show Lịch Trình</button>
+                    <button type="submit" class="btn btn-primary w-100">Show Schedule</button>
                 </div>
             </div>
         </form>

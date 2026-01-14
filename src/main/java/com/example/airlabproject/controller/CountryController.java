@@ -23,8 +23,4 @@ public class CountryController {
         return countryService.getAll();
     }
 
-    @PostMapping("/set-all")
-    public int setAll() {
-        return countryService.saveAllFromAirlabs();
-    }
 }
