@@ -23,4 +23,7 @@ public class AirportController {
         return airportService.getAll();
     }
 
+
+    
+
 }

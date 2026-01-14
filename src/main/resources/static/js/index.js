@@ -50,8 +50,12 @@ async function loadCountriesAsia() {
 
 // --- CẬP NHẬT HÀM LOAD SÂN BAY ---
 async function loadAirportsForCountry(countryCode) {
-    const airportSelect = document.getElementById('airportSelect');
-    const helper = document.getElementById('airportHelper');
+  const airportSelect = document.getElementById('airportSelect');
+  const helper = document.getElementById('airportHelper');
+  airportSelect.innerHTML = '<option value="">-- Đang tải sân bay... --</option>';
+  helper.textContent = '';
+  try {
+    const airports = await fetchJSON('/api/airports?country_code=' + encodeURIComponent(countryCode));
 
     // Reset và Bật loading
     helper.textContent = '';
