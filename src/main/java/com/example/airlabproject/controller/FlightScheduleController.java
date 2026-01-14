@@ -10,26 +10,17 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.airlabproject.dto.FlightScheduleDTO;
 import com.example.airlabproject.service.FlightScheduleService;
 
+import lombok.AllArgsConstructor;
+
 @RestController
+@AllArgsConstructor
 @RequestMapping("api/flights")
 public class FlightScheduleController {
     private FlightScheduleService flightService;
 
-    public FlightScheduleController(FlightScheduleService flightService) {
-        this.flightService = flightService;
-    }
-
     @GetMapping()
-    public List<FlightScheduleDTO> getAllFlights(@RequestParam(value = "airport_code", required = false) String airportCode) {
-        if (airportCode != null && !airportCode.isEmpty()) {
-            // Ensure data exists/cached by invoking fetch-on-miss then map to DTOs
-            return flightService.getFlights(airportCode).stream()
-                .map(f -> new FlightScheduleDTO(
-                    f.getAirlineIata(), f.getFlightIata(), f.getDepIata(), f.getArrIata(), f.getStatus(), f.getDepTime(), f.getArrTime(), f.getDepTimeUtc(), f.getArrTimeUtc()
-                ))
-                .toList();
-        }
-        return flightService.getAll();
+    public List<FlightScheduleDTO> getAllFlights(@RequestParam(value = "airport_code") String airportCode) {
+        return flightService.getFlights(airportCode);
     }
 
 }

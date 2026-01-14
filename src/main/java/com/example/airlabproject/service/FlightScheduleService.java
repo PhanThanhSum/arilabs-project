@@ -34,39 +34,24 @@ public class FlightScheduleService {
     private final String API_URL = "https://airlabs.co/api/v9/schedules";
 
     @Transactional
-    public List<FlightSchedule> getFlights(String airportCode) {
-        // 1. QUY TẮC CACHE: Chỉ lấy dữ liệu trong DB nếu nó được tạo trong vòng 30 phút qua
+    public List<FlightScheduleDTO> getFlights(String airportCode) {
         LocalDateTime timeThreshold = LocalDateTime.now().minusMinutes(30);
 
         List<FlightSchedule> cachedData = flightRepository.findByDepIataAndCreatedAtAfter(airportCode, timeThreshold);
 
         if (!cachedData.isEmpty()) {
             System.out.println("--> Lấy dữ liệu từ DATABASE (Cache)");
-            return cachedData;
+            return cachedData.stream()
+                .map(f -> new FlightScheduleDTO(
+                    f.getAirlineIata(), f.getFlightIata(), f.getDepIata(), f.getArrIata(), f.getStatus(), f.getDepTime(), f.getArrTime(), f.getDepTimeUtc(), f.getArrTimeUtc()
+                ))
+                .toList();
         }
-
-        // 2. Nếu không có cache hợp lệ -> Gọi API
         System.out.println("--> Gọi AIRLABS API mới");
         return fetchFromApiAndSave(airportCode);
     }
 
-    public List<FlightScheduleDTO> getAll() {
-        return flightRepository.findAll().stream()
-            .map(f -> new FlightScheduleDTO(
-                f.getAirlineIata(), f.getFlightIata(), f.getDepIata(), f.getArrIata(), f.getStatus(), f.getDepTime(), f.getArrTime(), f.getDepTimeUtc(), f.getArrTimeUtc()
-            ))
-            .collect(Collectors.toList());
-    }
-
-    public List<FlightScheduleDTO> getFlightsByAirportCode(String airportCode) {
-        return flightRepository.findByDepIata(airportCode).stream()
-            .map(f -> new FlightScheduleDTO(
-                f.getAirlineIata(), f.getFlightIata(), f.getDepIata(), f.getArrIata(), f.getStatus(), f.getDepTime(), f.getArrTime(), f.getDepTimeUtc(), f.getArrTimeUtc()
-            ))
-            .collect(Collectors.toList());
-    }
-
-    private List<FlightSchedule> fetchFromApiAndSave(String airportCode) {
+    private List<FlightScheduleDTO> fetchFromApiAndSave(String airportCode) {
         String url = API_URL + "?dep_iata=" + airportCode + "&api_key=" + apiKey;
 
         try {
@@ -108,8 +93,12 @@ public class FlightScheduleService {
 
             // Refresh cache for this departure airport
             flightRepository.deleteByDepIata(airportCode);
-            return flightRepository.saveAll(flightList);
-
+            List<FlightSchedule> savedFlights = flightRepository.saveAll(flightList);
+            return savedFlights.stream()
+                .map(f -> new FlightScheduleDTO(
+                    f.getAirlineIata(), f.getFlightIata(), f.getDepIata(), f.getArrIata(), f.getStatus(), f.getDepTime(), f.getArrTime(), f.getDepTimeUtc(), f.getArrTimeUtc()
+                ))
+                .collect(Collectors.toList());
         } catch (Exception e) {
             return new ArrayList<>();
         }

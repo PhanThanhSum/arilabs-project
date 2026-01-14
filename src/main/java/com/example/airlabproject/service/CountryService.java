@@ -42,14 +42,6 @@ public class CountryService {
     @Value("${api-key-airlabs}")
     private String airlabsApiKey;
 
-
-    public List<CountryDTO> getAll() {
-        return countryRepository.findAll()
-                .stream()
-                .map(c -> new CountryDTO(c.getCode(), c.getCode3(), c.getName(), c.getContinent() != null ? c.getContinent().getId() : null))
-                .collect(Collectors.toList());
-    }
-
     public List<CountryDTO> getByContinentId(String continentId) {
         if (continentId == null || continentId.isBlank()) return null;
 
