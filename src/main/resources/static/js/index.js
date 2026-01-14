@@ -1,60 +1,101 @@
+// Hàm tiện ích để bật/tắt loading cho một khu vực cụ thể
+function setLoading(isLoading, selectId, spinnerId) {
+    const select = document.getElementById(selectId);
+    const spinner = document.getElementById(spinnerId);
+
+    if (isLoading) {
+        spinner.classList.remove('d-none'); // Hiện spinner
+        select.disabled = true;             // Khóa ô chọn
+    } else {
+        spinner.classList.add('d-none');    // Ẩn spinner
+        select.disabled = false;            // Mở ô chọn
+    }
+}
+
 async function fetchJSON(url, options) {
-  const res = await fetch(url, options || {});
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  return await res.json();
+    const res = await fetch(url, options || {});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
 }
 
+// --- CẬP NHẬT HÀM LOAD QUỐC GIA ---
 async function loadCountriesAsia() {
-  const countrySelect = document.getElementById('countrySelect');
-  countrySelect.innerHTML = '<option value="">-- Select Country --</option>';
-  try {
-    const countries = await fetchJSON('/api/countries?continent_id=AS');
-    countries.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    for (const c of countries) {
-      const opt = document.createElement('option');
-      opt.value = c.code;
-      opt.textContent = c.name + (c.code ? ' (' + c.code + ')' : '');
-      countrySelect.appendChild(opt);
+    const countrySelect = document.getElementById('countrySelect');
+
+    // Bật loading
+    setLoading(true, 'countrySelect', 'countrySpinner');
+    countrySelect.innerHTML = '<option value="">-- Loading data... --</option>';
+
+    try {
+        const countries = await fetchJSON('/api/countries?continent_id=AS');
+        countries.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+        // Xóa text "Đang tải" và thêm option mặc định
+        countrySelect.innerHTML = '<option value="">-- Select a country --</option>';
+
+        for (const c of countries) {
+            const opt = document.createElement('option');
+            opt.value = c.code;
+            opt.textContent = c.name + (c.code ? ' (' + c.code + ')' : '');
+            countrySelect.appendChild(opt);
+        }
+    } catch (e) {
+        console.error('Failed to load countries', e);
+        countrySelect.innerHTML = '<option value="">Error loading data</option>';
+    } finally {
+        // Tắt loading dù thành công hay thất bại
+        setLoading(false, 'countrySelect', 'countrySpinner');
     }
-  } catch (e) {
-    console.error('Failed to load countries', e);
-  }
 }
 
+// --- CẬP NHẬT HÀM LOAD SÂN BAY ---
 async function loadAirportsForCountry(countryCode) {
-  const airportSelect = document.getElementById('airportSelect');
-  const helper = document.getElementById('airportHelper');
-  airportSelect.innerHTML = '<option value="">-- Loading airports... --</option>';
-  helper.textContent = '';
-  try {
-    const airports = await fetchJSON('/api/airports?country_code=' + encodeURIComponent(countryCode));
+    const airportSelect = document.getElementById('airportSelect');
+    const helper = document.getElementById('airportHelper');
 
-    airportSelect.innerHTML = '<option value="">-- Select Airport --</option>';
-    airports.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    for (const a of airports) {
-      const opt = document.createElement('option');
-      opt.value = a.iataCode;
-      const code = a.iataCode ? a.iataCode : (a.icaoCode || '');
-      opt.textContent = (a.name || code) + (code ? ' (' + code + ')' : '');
-      airportSelect.appendChild(opt);
+    // Reset và Bật loading
+    helper.textContent = '';
+    airportSelect.innerHTML = '<option value="">-- Loading airports... --</option>';
+    setLoading(true, 'airportSelect', 'airportSpinner');
+
+    try {
+        let airports = await fetchJSON('/api/airports?country_code=' + encodeURIComponent(countryCode));
+
+        airportSelect.innerHTML = '<option value="">-- Select an airport --</option>';
+        airports.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+        for (const a of airports) {
+            const opt = document.createElement('option');
+            opt.value = a.iataCode;
+            const code = a.iataCode ? a.iataCode : (a.icaoCode || '');
+            opt.textContent = (a.name || code) + (code ? ' (' + code + ')' : '');
+            airportSelect.appendChild(opt);
+        }
+
+        if (airports.length === 0) {
+            helper.textContent = 'No airports found for this country.';
+        } else {
+            helper.textContent = ''; // Xóa thông báo cũ nếu thành công
+        }
+
+    } catch (e) {
+        airportSelect.innerHTML = '<option value="">-- Error loading airports --</option>';
+        helper.textContent = 'An error occurred while loading the airport list.';
+        console.error('Failed to load airports', e);
+    } finally {
+        // Tắt loading
+        setLoading(false, 'airportSelect', 'airportSpinner');
     }
-    if (airports.length === 0) {
-      helper.textContent = 'No airports found for this country.';
-    }
-  } catch (e) {
-    airportSelect.innerHTML = '<option value="">-- Error loading airports --</option>';
-    helper.textContent = 'An error occurred while loading the airport list.';
-    console.error('Failed to load airports', e);
-  }
 }
 
+// Các hàm khác giữ nguyên (onCountryChange, renderFlights, onSearch, event listener...)
 function onCountryChange(ev) {
-  const countryCode = ev.target.value;
-  const airportSelect = document.getElementById('airportSelect');
-  airportSelect.innerHTML = '<option value="">-- Please select a country first --</option>';
-  if (countryCode) {
-    loadAirportsForCountry(countryCode);
-  }
+    const countryCode = ev.target.value;
+    const airportSelect = document.getElementById('airportSelect');
+    airportSelect.innerHTML = '<option value="">-- Please select a country first --</option>';
+    if (countryCode) {
+        loadAirportsForCountry(countryCode);
+    }
 }
 
 function renderFlights(flights) {

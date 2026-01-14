@@ -17,14 +17,20 @@
         <form id="searchForm">
             <div class="row">
                 <div class="col-md-5">
-                    <label class="form-label">Select Country:</label>
+                    <label class="form-label">
+                        Select Country:
+                        <span id="countrySpinner" class="spinner-border spinner-border-sm text-primary d-none ms-2"></span>
+                    </label>
                     <select id="countrySelect" class="form-select">
                         <option value="">-- Loading list... --</option>
                     </select>
                 </div>
 
                 <div class="col-md-5">
-                    <label class="form-label">Select Airport:</label>
+                    <label class="form-label">
+                        Select Airport:
+                        <span id="airportSpinner" class="spinner-border spinner-border-sm text-primary d-none ms-2"></span>
+                    </label>
                     <select id="airportSelect" name="airportCode" class="form-select" required>
                         <option value="">-- Please select a country first --</option>
                     </select>

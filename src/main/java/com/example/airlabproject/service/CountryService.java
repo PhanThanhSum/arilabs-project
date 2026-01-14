@@ -6,6 +6,7 @@ import com.example.airlabproject.entity.Country;
 import com.example.airlabproject.repository.ContinentRepository;
 import com.example.airlabproject.repository.CountryRepository;
 import com.google.gson.*;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -13,9 +14,12 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
 
 @Service
 public class CountryService {
@@ -23,13 +27,21 @@ public class CountryService {
     private final CountryRepository countryRepository;
     private final ContinentRepository continentRepository;
 
-    @Value("${api-key-airlabs}")
-    private String airlabsApiKey;
-
     public CountryService(CountryRepository countryRepository, ContinentRepository continentRepository) {
         this.countryRepository = countryRepository;
         this.continentRepository = continentRepository;
     }
+
+    private static final Logger log = LoggerFactory.getLogger(CountryService.class);
+
+    // HttpClient nên được tái sử dụng thay vì tạo mới mỗi lần (tốt cho hiệu năng)
+    private final HttpClient client = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
+
+    @Value("${api-key-airlabs}")
+    private String airlabsApiKey;
+
 
     public List<CountryDTO> getAll() {
         return countryRepository.findAll()
@@ -39,109 +51,80 @@ public class CountryService {
     }
 
     public List<CountryDTO> getByContinentId(String continentId) {
-        if (continentId == null || continentId.isBlank()) return getAll();
+        if (continentId == null || continentId.isBlank()) return null;
 
-        List<Country> list = countryRepository.findAllByContinent_Id(continentId);
-        if (list == null || list.isEmpty()) {
-            saveByContinentId(continentId);
-            list = countryRepository.findAllByContinent_Id(continentId);
+        Continent continent = continentRepository.findById(continentId).orElse(null);
+        if (continent == null) {
+            continentRepository.save(new Continent(continentId));
         }
 
-        return list.stream()
-                .map(c -> new CountryDTO(
-                        c.getCode(),
-                        c.getCode3(),
-                        c.getName(),
-                        c.getContinent() != null ? c.getContinent().getId() : null
-                ))
+        List<Country> countries = countryRepository.findAllByContinent_Id(continentId);
+        if (countries.isEmpty()) {
+            countries = fetchAndSaveCountriesByContinent(continentId);
+        }
+        return countries
+                .stream()
+                .map(c -> new CountryDTO(c.getCode(), c.getCode3(), c.getName(), c.getContinent() != null ? c.getContinent().getId() : null))
                 .collect(Collectors.toList());
     }
 
-    public int saveByContinentId(String continentId) {
-        if (continentId == null || continentId.isBlank()) return 0;
+    private List<Country> fetchAndSaveCountriesByContinent(String continentId) {
+        String url = String.format("https://airlabs.co/api/v9/countries?api_key=%s&continent=%s", airlabsApiKey, continentId);
 
-        Continent continentRef = continentRepository.findById(continentId).orElse(null);
-        if (continentRef == null) return 0; // require existing continent (FK constraint)
-
-        int saved = 0;
-        HttpClient client = HttpClient.newHttpClient();
-        Gson gson = new GsonBuilder().create();
-
-        String url = "https://airlabs.co/api/v9/countries?api_key=" + airlabsApiKey + "&continent=" + continentId;
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .GET()
                     .build();
+
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-            JsonObject root = JsonParser.parseString(response.body()).getAsJsonObject();
-            JsonArray countries = root.getAsJsonArray("response");
-            if (countries == null) return 0;
+            // 1. Kiểm tra HTTP Status
+            if (response.statusCode() != 200) {
+                log.error("API Error: Status Code {} - Body: {}", response.statusCode(), response.body());
+                return null;
+            }
 
-            List<Country> batch = new ArrayList<>();
-            for (JsonElement element : countries) {
+            // 2. Parse JSON
+            JsonObject root = JsonParser.parseString(response.body()).getAsJsonObject();
+
+            // Kiểm tra xem key "response" có tồn tại và là mảng không
+            if (!root.has("response") || !root.get("response").isJsonArray()) {
+                log.warn("API response does not contain valid data for continent: {}", continentId);
+                return null;
+            }
+
+            JsonArray dataArray = root.getAsJsonArray("response");
+            List<Country> countries = new ArrayList<>();
+
+            // 3. Loop và Map dữ liệu
+            for (JsonElement element : dataArray) {
                 JsonObject obj = element.getAsJsonObject();
 
-                String code = obj.has("code") && !obj.get("code").isJsonNull() ? obj.get("code").getAsString() : null;
-                String code3 = obj.has("code3") && !obj.get("code3").isJsonNull() ? obj.get("code3").getAsString() : null;
-                String name = obj.has("name") && !obj.get("name").isJsonNull() ? obj.get("name").getAsString() : null;
+                String code = getSafeString(obj, "code");
+                String code3 = getSafeString(obj, "code3");
+                String name = getSafeString(obj, "name");
 
-                if (code == null || name == null) continue;
-
-                Country country = new Country(code, code3, name, continentRef);
-                batch.add(country);
+                countries.add(new Country(code, code3, name, new Continent("AS")));
             }
 
-            if (!batch.isEmpty()) {
-                countryRepository.saveAll(batch);
-                saved = batch.size();
+            // 4. Lưu vào DB
+            if (!countries.isEmpty()) {
+                List<Country> savedCountries = countryRepository.saveAll(countries);
+                log.info("Saved {} countries for continent {}", savedCountries.size(), continentId);
             }
+            return countries;
+
         } catch (Exception e) {
-            // ignore and return what we have
+            log.error("Error processing continentId: " + continentId, e);
         }
-
-        return saved;
+        return null;
     }
 
-    public int saveAllFromAirlabs() {
-        List<Continent> continents = continentRepository.findAll();
-        if (continents.isEmpty()) return 0;
-
-        int saved = 0;
-        HttpClient client = HttpClient.newHttpClient();
-        Gson gson = new GsonBuilder().create();
-
-        for (Continent continent : continents) {
-            String url = "https://airlabs.co/api/v9/countries?api_key=" + airlabsApiKey + "&continent=" + continent.getId();
-            try {
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(url))
-                        .GET()
-                        .build();
-                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-                JsonObject root = JsonParser.parseString(response.body()).getAsJsonObject();
-                JsonArray countries = root.getAsJsonArray("response");
-                if (countries == null) continue;
-
-                List<Country> batch = new ArrayList<>();
-                for (JsonElement element : countries) {
-                    JsonObject obj = element.getAsJsonObject();
-                    String code = obj.has("code") && !obj.get("code").isJsonNull() ? obj.get("code").getAsString() : null;
-                    String code3 = obj.has("code3") && !obj.get("code3").isJsonNull() ? obj.get("code3").getAsString() : null;
-                    String name = obj.has("name") && !obj.get("name").isJsonNull() ? obj.get("name").getAsString() : null;
-                    if (code == null || name == null) continue;
-                    batch.add(new Country(code, code3, name, continent));
-                }
-                if (!batch.isEmpty()) {
-                    countryRepository.saveAll(batch);
-                    saved += batch.size();
-                }
-            } catch (Exception e) {
-                // Skip this continent on error
-            }
+    private String getSafeString(JsonObject obj, String memberName) {
+        if (obj.has(memberName) && !obj.get(memberName).isJsonNull()) {
+            return obj.get(memberName).getAsString();
         }
-        return saved;
+        return null;
     }
 }
