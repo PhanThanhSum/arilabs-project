@@ -6,6 +6,7 @@ import com.example.airlabproject.entity.Country;
 import com.example.airlabproject.repository.ContinentRepository;
 import com.example.airlabproject.repository.CountryRepository;
 import com.google.gson.*;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -13,9 +14,12 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
 
 @Service
 public class CountryService {
@@ -23,13 +27,21 @@ public class CountryService {
     private final CountryRepository countryRepository;
     private final ContinentRepository continentRepository;
 
-    @Value("${api-key-airlabs}")
-    private String airlabsApiKey;
-
     public CountryService(CountryRepository countryRepository, ContinentRepository continentRepository) {
         this.countryRepository = countryRepository;
         this.continentRepository = continentRepository;
     }
+
+    private static final Logger log = LoggerFactory.getLogger(CountryService.class);
+
+    // HttpClient nên được tái sử dụng thay vì tạo mới mỗi lần (tốt cho hiệu năng)
+    private final HttpClient client = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
+
+    @Value("${api-key-airlabs}")
+    private String airlabsApiKey;
+
 
     public List<CountryDTO> getAll() {
         return countryRepository.findAll()
@@ -39,8 +51,18 @@ public class CountryService {
     }
 
     public List<CountryDTO> getByContinentId(String continentId) {
-        if (continentId == null || continentId.isBlank()) return getAll();
-        return countryRepository.findAllByContinent_Id(continentId)
+        if (continentId == null || continentId.isBlank()) return null;
+
+        Continent continent = continentRepository.findById(continentId).orElse(null);
+        if (continent == null) {
+            continentRepository.save(new Continent(continentId));
+        }
+
+        List<Country> countries = countryRepository.findAllByContinent_Id(continentId);
+        if (countries.isEmpty()) {
+            countries = fetchAndSaveCountriesByContinent(continentId);
+        }
+        return countries
                 .stream()
                 .map(c -> new CountryDTO(c.getCode(), c.getCode3(), c.getName(), c.getContinent() != null ? c.getContinent().getId() : null))
                 .collect(Collectors.toList());
@@ -83,7 +105,38 @@ public class CountryService {
             } catch (Exception e) {
                 // Skip this continent on error
             }
+
+            JsonArray dataArray = root.getAsJsonArray("response");
+            List<Country> countries = new ArrayList<>();
+
+            // 3. Loop và Map dữ liệu
+            for (JsonElement element : dataArray) {
+                JsonObject obj = element.getAsJsonObject();
+
+                String code = getSafeString(obj, "code");
+                String code3 = getSafeString(obj, "code3");
+                String name = getSafeString(obj, "name");
+
+                countries.add(new Country(code, code3, name, new Continent("AS")));
+            }
+
+            // 4. Lưu vào DB
+            if (!countries.isEmpty()) {
+                List<Country> savedCountries = countryRepository.saveAll(countries);
+                log.info("Saved {} countries for continent {}", savedCountries.size(), continentId);
+            }
+            return countries;
+
+        } catch (Exception e) {
+            log.error("Error processing continentId: " + continentId, e);
         }
-        return saved;
+        return null;
+    }
+
+    private String getSafeString(JsonObject obj, String memberName) {
+        if (obj.has(memberName) && !obj.get(memberName).isJsonNull()) {
+            return obj.get(memberName).getAsString();
+        }
+        return null;
     }
 }

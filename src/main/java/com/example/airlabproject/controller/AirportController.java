@@ -15,7 +15,6 @@ public class AirportController {
         this.airportService = airportService;
     }
 
-
     @GetMapping
     public List<AirportDTO> getAll(@RequestParam(value = "country_code", required = false) String countryCode){
         if (countryCode != null && !countryCode.isBlank()) {

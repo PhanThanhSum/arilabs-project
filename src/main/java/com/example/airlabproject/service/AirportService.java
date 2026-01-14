@@ -33,7 +33,7 @@ public class AirportService {
     public List<AirportDTO> getAll() {
         return airportRepository.findAll()
                 .stream()
-                .map(c -> new AirportDTO(c.getIataCode(), c.getName(), c.getIcaoCode(), c.getLat(), c.getLng(), c.getParentCountry() != null ? c.getParentCountry().getCode() : null))
+                .map(c -> new AirportDTO(c.getIataCode(), c.getName(), c.getIcaoCode(), c.getLat(), c.getLng(), c.getCountry() != null ? c.getCountry().getCode() : null))
                 .collect(Collectors.toList());
     }
 
@@ -55,12 +55,12 @@ public class AirportService {
                 .collect(Collectors.toList());
     }
 
-    public int saveByCountryCode(String countryCode) {
-        if (countryCode == null || countryCode.isBlank()) return 0;
+    public List<Airport> fetchAndSaveByCountryCode(String countryCode) {
+        if (countryCode == null || countryCode.isBlank()) return null;
 
         Country countryRef = countryRepository.findById(countryCode).orElse(null);
-        if (countryRef == null) return 0; // require existing country (FK constraint)
-        int saved = 0;
+        if (countryRef == null) return null;
+
         HttpClient client = HttpClient.newHttpClient();
         Gson gson = new GsonBuilder().create();
 
@@ -74,7 +74,7 @@ public class AirportService {
 
             JsonObject root = JsonParser.parseString(response.body()).getAsJsonObject();
             JsonArray airports = root.getAsJsonArray("response");
-            if (airports == null) return 0;
+            if (airports == null) return null;
 
             List<Airport> batch = new ArrayList<>();
             for (JsonElement element : airports) {
@@ -87,10 +87,16 @@ public class AirportService {
                 java.math.BigDecimal lat = null;
                 java.math.BigDecimal lng = null;
                 if (obj.has("lat") && !obj.get("lat").isJsonNull()) {
-                    try { lat = java.math.BigDecimal.valueOf(obj.get("lat").getAsDouble()); } catch (Exception ignored) {}
+                    try {
+                        lat = java.math.BigDecimal.valueOf(obj.get("lat").getAsDouble());
+                    } catch (Exception ignored) {
+                    }
                 }
                 if (obj.has("lng") && !obj.get("lng").isJsonNull()) {
-                    try { lng = java.math.BigDecimal.valueOf(obj.get("lng").getAsDouble()); } catch (Exception ignored) {}
+                    try {
+                        lng = java.math.BigDecimal.valueOf(obj.get("lng").getAsDouble());
+                    } catch (Exception ignored) {
+                    }
                 }
 
                 if (iata == null || name == null) continue;
@@ -103,8 +109,8 @@ public class AirportService {
                 ap.setLng(lng);
 
                 if (countryCode != null) {
-                    Country parent = countryRepository.findById(countryCode).orElse(null);
-                    ap.setParentCountry(parent);
+                    Country country = countryRepository.findById(countryCode).orElse(null);
+                    ap.setCountry(country);
                 }
 
                 if (ap.getIcaoCode() == null || ap.getIataCode() == null) continue;
@@ -112,15 +118,15 @@ public class AirportService {
             }
 
             if (!batch.isEmpty()) {
-                airportRepository.saveAll(batch);
-                saved = batch.size();
+                return airportRepository.saveAll(batch);
+
             }
         } catch (Exception e) {
-            // ignore and return what we have
+            e.printStackTrace();
         }
 
-        return saved;
+        return null;
     }
-    
+
 
 }
