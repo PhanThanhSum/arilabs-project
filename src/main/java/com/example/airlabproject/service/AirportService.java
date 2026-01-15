@@ -30,6 +30,20 @@ public class AirportService {
         this.countryRepository = countryRepository;
         this.airportRepository = airportRepository;
     }
+    
+    //Khởi tạo lưu tất cả data của Airport
+    public void initAllAirports() {
+        if (airportRepository.count() > 0) return;
+
+        List<Country> countries = countryRepository.findAll();
+
+        for (Country country : countries) {
+            fetchAndSaveByCountryCode(country.getCode());
+        }
+
+        System.out.println("✔ Airports initialized");
+    }
+
 
     public List<AirportDTO> getByCountryCode(String countryCode) {
         List<Airport> airports = airportRepository.findAllByCountry_Code(countryCode);

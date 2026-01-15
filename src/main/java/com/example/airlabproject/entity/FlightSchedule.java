@@ -2,35 +2,39 @@ package com.example.airlabproject.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "flight_schedule")
 @Data
-@Table(name = "flight_schedules")
 public class FlightSchedule {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String airlineIata; // Hãng bay (IATA)
-    private String flightIata;  // Số hiệu chuyến bay (VN123)
-    private String depIata;     // Sân bay đi (HAN)
-    private String arrIata;     // Sân bay đến (SGN)
-    private String status;      // Trạng thái
+    // 🔥 MANY TO ONE
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "airline_iata", referencedColumnName = "iata_code")
+    private Airline airline;
 
-    private LocalDateTime depTime; // Giờ đi
-    private LocalDateTime arrTime; // Giờ đến
-    private LocalDateTime depTimeUtc; // Giờ đi UTC
-    private LocalDateTime arrTimeUtc; // Giờ đến UTC
+    private String flightIata;
+    private String depIata;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+        name = "arr_iata",
+        referencedColumnName = "iata_code" 
+    )
+    private Airport arrivalAirport;
 
-    private LocalDateTime createdAt;
 
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-    }
+    private String status;
 
-    // ===== getters & setters =====
-    
+    private LocalDateTime depTime;
+    private LocalDateTime depTimeUtc;
+    private LocalDateTime arrTime;
+    private LocalDateTime arrTimeUtc;
 
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

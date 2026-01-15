@@ -31,6 +31,20 @@ public class CountryService {
         this.countryRepository = countryRepository;
         this.continentRepository = continentRepository;
     }
+    
+    //Khởi tạo lưu tất cả country ban đầu
+    public void initAllCountries() {
+        if (countryRepository.count() > 0) return;
+
+        List<String> continentIds = List.of("AF", "AN", "AS", "EU", "NA", "OC", "SA");
+
+        for (String continentId : continentIds) {
+            fetchAndSaveCountriesByContinent(continentId);
+        }
+
+        System.out.println("✔ Countries initialized");
+    }
+
 
     private static final Logger log = LoggerFactory.getLogger(CountryService.class);
 
@@ -97,7 +111,9 @@ public class CountryService {
                 String code3 = getSafeString(obj, "code3");
                 String name = getSafeString(obj, "name");
 
-                countries.add(new Country(code, code3, name, new Continent("AS")));
+                Continent continent = continentRepository.findById(continentId).orElse(null);
+                countries.add(new Country(code, code3, name, continent));
+
             }
 
             // 4. Lưu vào DB

@@ -1,12 +1,13 @@
 package com.example.airlabproject.service;
 
 import com.example.airlabproject.dto.FlightScheduleDTO;
+import com.example.airlabproject.entity.Airline;
+import com.example.airlabproject.entity.Airport;
 import com.example.airlabproject.entity.FlightSchedule;
+import com.example.airlabproject.repository.AirlineRepository;
+import com.example.airlabproject.repository.AirportRepository;
 import com.example.airlabproject.repository.FlightScheduleRepository;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,7 +21,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class FlightScheduleService {
@@ -28,30 +28,47 @@ public class FlightScheduleService {
     @Autowired
     private FlightScheduleRepository flightRepository;
 
+    @Autowired
+    private AirlineRepository airlineRepository;
+
+    @Autowired
+    private AirportRepository airportRepository;
+
+
     @Value("${api-key-airlabs}")
     private String apiKey;
 
-    private final String API_URL = "https://airlabs.co/api/v9/schedules";
+    private static final String API_URL = "https://airlabs.co/api/v9/schedules";
 
+    // =========================
+    // PUBLIC API
+    // =========================
     @Transactional
     public List<FlightScheduleDTO> getFlights(String airportCode) {
+
         LocalDateTime timeThreshold = LocalDateTime.now().minusMinutes(30);
 
-        List<FlightSchedule> cachedData = flightRepository.findByDepIataAndCreatedAtAfter(airportCode, timeThreshold);
+        List<FlightSchedule> cachedFlights =
+                flightRepository.findByDepIataAndCreatedAtAfter(
+                        airportCode, timeThreshold
+                );
 
-        if (!cachedData.isEmpty()) {
-            System.out.println("--> Lấy dữ liệu từ DATABASE (Cache)");
-            return cachedData.stream()
-                .map(f -> new FlightScheduleDTO(
-                    f.getAirlineIata(), f.getFlightIata(), f.getDepIata(), f.getArrIata(), f.getStatus(), f.getDepTime(), f.getArrTime(), f.getDepTimeUtc(), f.getArrTimeUtc()
-                ))
-                .toList();
+        if (!cachedFlights.isEmpty()) {
+            System.out.println("--> Lấy dữ liệu từ DATABASE (ManyToOne Airline)");
+            return cachedFlights.stream()
+                    .map(this::toDTO)
+                    .toList();
         }
+
         System.out.println("--> Gọi AIRLABS API mới");
         return fetchFromApiAndSave(airportCode);
     }
 
+    // =========================
+    // FETCH API + SAVE
+    // =========================
     private List<FlightScheduleDTO> fetchFromApiAndSave(String airportCode) {
+
         String url = API_URL + "?dep_iata=" + airportCode + "&api_key=" + apiKey;
 
         try {
@@ -60,28 +77,46 @@ public class FlightScheduleService {
                     .uri(URI.create(url))
                     .GET()
                     .build();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-            JsonObject root = JsonParser.parseString(response.body()).getAsJsonObject();
-            JsonArray responseArray = root.has("response") && root.get("response").isJsonArray() ? root.getAsJsonArray("response") : null;
+            HttpResponse<String> response =
+                    client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            JsonObject root =
+                    JsonParser.parseString(response.body()).getAsJsonObject();
+
+            JsonArray responseArray =
+                    root.has("response") && root.get("response").isJsonArray()
+                            ? root.getAsJsonArray("response")
+                            : null;
 
             List<FlightSchedule> flightList = new ArrayList<>();
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+            DateTimeFormatter formatter =
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
             if (responseArray != null) {
                 for (JsonElement el : responseArray) {
                     JsonObject node = el.getAsJsonObject();
 
-                    FlightSchedule f = new FlightSchedule();
+                    String airlineIata = getString(node, "airline_iata");
 
-                    // Strings
-                    f.setAirlineIata(getString(node, "airline_iata"));
+                    Airline airline = airlineRepository
+                            .findById(airlineIata)
+                            .orElse(null);
+
+                    FlightSchedule f = new FlightSchedule();
+                    f.setAirline(airline);
                     f.setFlightIata(getString(node, "flight_iata"));
                     f.setDepIata(getString(node, "dep_iata"));
-                    f.setArrIata(getString(node, "arr_iata"));
+                    String arrIata = getString(node, "arr_iata");
+
+                    Airport arrivalAirport = airportRepository
+                        .findById(arrIata)
+                        .orElse(null);
+
+                    f.setArrivalAirport(arrivalAirport);
+
                     f.setStatus(getString(node, "status"));
 
-                    // Times (local & UTC)
                     f.setDepTime(parseTime(getString(node, "dep_time"), formatter));
                     f.setDepTimeUtc(parseTime(getString(node, "dep_time_utc"), formatter));
                     f.setArrTime(parseTime(getString(node, "arr_time"), formatter));
@@ -91,21 +126,62 @@ public class FlightScheduleService {
                 }
             }
 
-            // Refresh cache for this departure airport
+            // Refresh cache theo sân bay
             flightRepository.deleteByDepIata(airportCode);
-            List<FlightSchedule> savedFlights = flightRepository.saveAll(flightList);
+
+            List<FlightSchedule> savedFlights =
+                    flightRepository.saveAll(flightList);
+
             return savedFlights.stream()
-                .map(f -> new FlightScheduleDTO(
-                    f.getAirlineIata(), f.getFlightIata(), f.getDepIata(), f.getArrIata(), f.getStatus(), f.getDepTime(), f.getArrTime(), f.getDepTimeUtc(), f.getArrTimeUtc()
-                ))
-                .collect(Collectors.toList());
+                    .map(this::toDTO)
+                    .toList();
+
         } catch (Exception e) {
+            e.printStackTrace();
             return new ArrayList<>();
         }
     }
 
+    // =========================
+    // ENTITY -> DTO
+    // =========================
+    private FlightScheduleDTO toDTO(FlightSchedule f) {
+
+        FlightScheduleDTO dto = new FlightScheduleDTO();
+
+        dto.setFlightIata(f.getFlightIata());
+        if (f.getArrivalAirport() != null) {
+            dto.setArrAirportName(
+                f.getArrivalAirport().getName()
+            );
+        } else {
+            dto.setArrAirportName(null);
+        }
+
+        dto.setStatus(f.getStatus());
+        dto.setDepTime(f.getDepTime());
+        dto.setDepTimeUtc(f.getDepTimeUtc());
+        dto.setArrTime(f.getArrTime());
+        dto.setArrTimeUtc(f.getArrTimeUtc());
+
+        if (f.getAirline() != null) {
+            dto.setAirlineIata(f.getAirline().getIataCode());
+            dto.setAirlineName(f.getAirline().getName());
+        } else {
+            dto.setAirlineIata(null);
+            dto.setAirlineName(null);
+        }
+
+        return dto;
+    }
+
+    // =========================
+    // UTIL
+    // =========================
     private String getString(JsonObject obj, String key) {
-        return obj.has(key) && !obj.get(key).isJsonNull() ? obj.get(key).getAsString() : null;
+        return obj.has(key) && !obj.get(key).isJsonNull()
+                ? obj.get(key).getAsString()
+                : null;
     }
 
     private LocalDateTime parseTime(String value, DateTimeFormatter fmt) {
