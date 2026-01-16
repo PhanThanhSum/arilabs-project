@@ -2,7 +2,6 @@ package com.example.airlabproject.service;
 
 import com.example.airlabproject.dto.AirportDTO;
 import com.example.airlabproject.entity.Airport;
-import com.example.airlabproject.entity.Country;
 import com.example.airlabproject.repository.AirportRepository;
 import com.example.airlabproject.repository.CountryRepository;
 import com.google.gson.*;
@@ -20,6 +19,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class AirportService {
+
     private final CountryRepository countryRepository;
     private final AirportRepository airportRepository;
 
@@ -30,94 +30,46 @@ public class AirportService {
         this.countryRepository = countryRepository;
         this.airportRepository = airportRepository;
     }
-    
-    //Khởi tạo lưu tất cả data của Airport
+
+    /**
+     * Khởi tạo toàn bộ airport chỉ với 1 request
+     */
     public void initAllAirports() {
-        if (airportRepository.count() > 0) return;
-
-        List<Country> countries = countryRepository.findAll();
-
-        for (Country country : countries) {
-            fetchAndSaveByCountryCode(country.getCode());
+        if (airportRepository.count() > 0) {
+            System.out.println(">>> Airports already initialized");
+            return;
         }
 
-        System.out.println("✔ Airports initialized");
-    }
-
-
-    public List<AirportDTO> getByCountryCode(String countryCode) {
-        List<Airport> airports = airportRepository.findAllByCountry_Code(countryCode);
-
-        if (airports.isEmpty()) {
-            List<Airport> savedAirport = fetchAndSaveByCountryCode(countryCode);
-            return savedAirport
-                    .stream()
-                    .map(c -> new AirportDTO(
-                            c.getIataCode(),
-                            c.getName(),
-                            c.getIcaoCode(),
-                            c.getLat(),
-                            c.getLng(),
-                            c.getCountry() != null ? c.getCountry().getCode() : null
-                    ))
-                    .collect(Collectors.toList());
-        }
-
-        return airportRepository.findAllByCountry_Code(countryCode)
-                .stream()
-                .map(c -> new AirportDTO(
-                        c.getIataCode(),
-                        c.getName(),
-                        c.getIcaoCode(),
-                        c.getLat(),
-                        c.getLng(),
-                        c.getCountry() != null ? c.getCountry().getCode() : null
-                ))
-                .collect(Collectors.toList());
-    }
-
-    private List<Airport> fetchAndSaveByCountryCode(String countryCode) {
-        if (countryCode == null || countryCode.isBlank()) return null;
-
-        Country countryRef = countryRepository.findById(countryCode).orElse(null);
-        if (countryRef == null) return null;
+        System.out.println(">>> Fetching ALL airports from Airlabs (1 request)");
 
         HttpClient client = HttpClient.newHttpClient();
+        String url = "https://airlabs.co/api/v9/airports?api_key=" + airlabsApiKey;
 
-        String url = "https://airlabs.co/api/v9/airports?api_key=" + airlabsApiKey + "&country_code=" + countryCode;
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .GET()
                     .build();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            HttpResponse<String> response =
+                    client.send(request, HttpResponse.BodyHandlers.ofString());
 
             JsonObject root = JsonParser.parseString(response.body()).getAsJsonObject();
             JsonArray airports = root.getAsJsonArray("response");
-            if (airports == null) return null;
+            if (airports == null || airports.isEmpty()) {
+                System.out.println(">>> No airports returned from API");
+                return;
+            }
 
             List<Airport> batch = new ArrayList<>();
+
             for (JsonElement element : airports) {
                 JsonObject obj = element.getAsJsonObject();
 
-                String iata = obj.has("iata_code") && !obj.get("iata_code").isJsonNull() ? obj.get("iata_code").getAsString() : null;
-                String name = obj.has("name") && !obj.get("name").isJsonNull() ? obj.get("name").getAsString() : null;
-                String icao = obj.has("icao_code") && !obj.get("icao_code").isJsonNull() ? obj.get("icao_code").getAsString() : null;
-
-                BigDecimal lat = null;
-                BigDecimal lng = null;
-                if (obj.has("lat") && !obj.get("lat").isJsonNull()) {
-                    try {
-                        lat = BigDecimal.valueOf(obj.get("lat").getAsDouble());
-                    } catch (Exception ignored) {
-                    }
-                }
-                if (obj.has("lng") && !obj.get("lng").isJsonNull()) {
-                    try {
-                        lng = java.math.BigDecimal.valueOf(obj.get("lng").getAsDouble());
-                    } catch (Exception ignored) {
-                    }
-                }
+                String iata = getString(obj, "iata_code");
+                String name = getString(obj, "name");
+                String icao = getString(obj, "icao_code");
+                String countryCode = getString(obj, "country_code");
 
                 if (iata == null || name == null) continue;
 
@@ -125,28 +77,59 @@ public class AirportService {
                 ap.setIataCode(iata);
                 ap.setName(name);
                 ap.setIcaoCode(icao);
-                ap.setLat(lat);
-                ap.setLng(lng);
+                ap.setLat(getBigDecimal(obj, "lat"));
+                ap.setLng(getBigDecimal(obj, "lng"));
 
                 if (countryCode != null) {
-                    Country country = countryRepository.findById(countryCode).orElse(null);
-                    ap.setCountry(country);
+                    countryRepository.findById(countryCode)
+                            .ifPresent(ap::setCountry);
                 }
 
-                if (ap.getIcaoCode() == null || ap.getIataCode() == null) continue;
                 batch.add(ap);
             }
 
-            if (!batch.isEmpty()) {
-                return airportRepository.saveAll(batch);
+            airportRepository.saveAll(batch);
+            System.out.println("✔ Saved airports: " + batch.size());
 
-            }
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        return null;
     }
 
+    /**
+     * API cho frontend: chỉ đọc DB, KHÔNG gọi Airlabs nữa
+     */
+    public List<AirportDTO> getByCountryCode(String countryCode) {
+        return airportRepository.findAllByCountry_Code(countryCode)
+                .stream()
+                .map(a -> new AirportDTO(
+                        a.getIataCode(),
+                        a.getName(),
+                        a.getIcaoCode(),
+                        a.getLat(),
+                        a.getLng(),
+                        a.getCountry() != null ? a.getCountry().getCode() : null
+                ))
+                .collect(Collectors.toList());
+    }
 
+    // ======================
+    // Helpers
+    // ======================
+
+    private String getString(JsonObject obj, String field) {
+        return obj.has(field) && !obj.get(field).isJsonNull()
+                ? obj.get(field).getAsString()
+                : null;
+    }
+
+    private BigDecimal getBigDecimal(JsonObject obj, String field) {
+        try {
+            return obj.has(field) && !obj.get(field).isJsonNull()
+                    ? BigDecimal.valueOf(obj.get(field).getAsDouble())
+                    : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }
