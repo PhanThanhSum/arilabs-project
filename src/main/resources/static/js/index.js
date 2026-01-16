@@ -99,24 +99,24 @@ function onCountryChange(ev) {
 }
 
 function renderFlights(flights) {
-    const container = document.getElementById('flightsContainer');
-    container.innerHTML = '';
+  const container = document.getElementById('flightsContainer');
+  container.innerHTML = '';
 
-    const card = document.createElement('div');
-    card.className = 'card p-4';
+  const card = document.createElement('div');
+  card.className = 'card p-4';
 
-    if (!flights || flights.length === 0) {
-        const warn = document.createElement('div');
-        warn.className = 'alert alert-warning';
-        warn.textContent = 'No flights found or API rate limit exceeded.';
-        card.appendChild(warn);
-        container.appendChild(card);
-        return;
-    }
+  if (!flights || flights.length === 0) {
+    const warn = document.createElement('div');
+    warn.className = 'alert alert-warning';
+    warn.textContent = 'No flights found or API rate limit exceeded.';
+    card.appendChild(warn);
+    container.appendChild(card);
+    return;
+  }
 
-    const table = document.createElement('table');
-    table.className = 'table table-striped table-hover';
-    table.innerHTML = `
+  const table = document.createElement('table');
+  table.className = 'table table-striped table-hover';
+  table.innerHTML = `
     <thead>
       <tr>
         <th>Airline (IATA)</th>
@@ -131,20 +131,20 @@ function renderFlights(flights) {
       </tr>
     </thead>
     <tbody></tbody>`;
-    const tbody = table.querySelector('tbody');
+  const tbody = table.querySelector('tbody');
 
-    const fmt = (dt) => {
-        if (!dt) return '-';
-        try {
-            const d = new Date(dt);
-            return d.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
-        } catch (_) { return '-'; }
-    };
+  const fmt = (dt) => {
+    if (!dt) return '-';
+    try {
+      const d = new Date(dt);
+      return d.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch (_) { return '-'; }
+  };
 
-    for (const f of flights) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-      <td>${f.airlineName ?? '-'}</td>
+  for (const f of flights) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${f.airlineIata ?? '-'}</td>
       <td>${f.flightIata ?? '-'}</td>
       <td>${f.depIata ?? '-'}</td>
       <td>${fmt(f.depTime)}</td>
@@ -154,11 +154,11 @@ function renderFlights(flights) {
       <td>${fmt(f.arrTimeUtc)}</td>
       <td><span class="badge ${f.status === 'active' || f.status === 'landed' ? 'bg-success' : 'bg-secondary'}">${f.status ?? '-'}</span></td>
     `;
-        tbody.appendChild(tr);
-    }
+    tbody.appendChild(tr);
+  }
 
-    card.appendChild(table);
-    container.appendChild(card);
+  card.appendChild(table);
+  container.appendChild(card);
 }
 
 // Track current flights for filtering
@@ -166,82 +166,82 @@ let currentFlights = [];
 
 // Compute status stats
 function computeStatusStats(flights) {
-    const stats = { landed: 0, active: 0, scheduled: 0 };
-    for (const f of flights || []) {
-        const s = (f.status || '').toLowerCase();
-        if (s in stats) stats[s]++;
-    }
-    return stats;
+  const stats = { landed: 0, active: 0, scheduled: 0 };
+  for (const f of flights || []) {
+    const s = (f.status || '').toLowerCase();
+    if (s in stats) stats[s]++;
+  }
+  return stats;
 }
 
 // Read selected statuses from checkboxes
 function getSelectedStatuses() {
-    const set = new Set();
-    if (document.getElementById('chkActive')?.checked) set.add('active');
-    if (document.getElementById('chkLanded')?.checked) set.add('landed');
-    if (document.getElementById('chkScheduled')?.checked) set.add('scheduled');
-    return set;
+  const set = new Set();
+  if (document.getElementById('chkActive')?.checked) set.add('active');
+  if (document.getElementById('chkLanded')?.checked) set.add('landed');
+  if (document.getElementById('chkScheduled')?.checked) set.add('scheduled');
+  return set;
 }
 
 // Filter flights by selected statuses
 function filterFlightsByStatus(flights, selected) {
-    if (!selected || selected.size === 0) return flights || [];
-    return (flights || []).filter(f => selected.has((f.status || '').toLowerCase()));
+  if (!selected || selected.size === 0) return flights || [];
+  return (flights || []).filter(f => selected.has((f.status || '').toLowerCase()));
 }
 
 // Update counters next to each status
 function updateStatusBadges(stats) {
-    const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = String(val); };
-    setText('count-active', stats.active ?? 0);
-    setText('count-landed', stats.landed ?? 0);
-    setText('count-scheduled', stats.scheduled ?? 0);
+  const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = String(val); };
+  setText('count-active', stats.active ?? 0);
+  setText('count-landed', stats.landed ?? 0);
+  setText('count-scheduled', stats.scheduled ?? 0);
 }
 
 // Update visible flights count
 function updateVisibleCount(n) {
-    const el = document.getElementById('visible-count');
-    if (el) el.textContent = String(n ?? 0);
+  const el = document.getElementById('visible-count');
+  if (el) el.textContent = String(n ?? 0);
 }
 
 // Handle changing filters
 function onStatusFilterChange() {
-    const selected = getSelectedStatuses();
-    const filtered = filterFlightsByStatus(currentFlights, selected);
-    updateVisibleCount(filtered.length);
-    renderFlights(filtered);
+  const selected = getSelectedStatuses();
+  const filtered = filterFlightsByStatus(currentFlights, selected);
+  updateVisibleCount(filtered.length);
+  renderFlights(filtered);
 }
 
 // Modify onSearch to store flights, compute stats, apply filters, and render
 async function onSearch(e) {
-    e.preventDefault();
-    const airportCode = document.getElementById('airportSelect').value;
-    if (!airportCode) return;
-    try {
-        const flights = await fetchJSON('/api/flights?airport_code=' + encodeURIComponent(airportCode));
-
-        // Update danh sach chuyen bay hien tai
-        currentFlights = flights || [];
-        updateStatusBadges(computeStatusStats(currentFlights));
-        const filtered = filterFlightsByStatus(currentFlights, getSelectedStatuses());
-        updateVisibleCount(filtered.length);
-        renderFlights(filtered);
-    } catch (err) {
-        console.error(err);
-        currentFlights = [];
-        updateStatusBadges(computeStatusStats(currentFlights));
-        updateVisibleCount(0);
-        renderFlights([]);
-    }
+  e.preventDefault();
+  const airportCode = document.getElementById('airportSelect').value;
+  if (!airportCode) return;
+  try {
+    const flights = await fetchJSON('/api/flights?airport_code=' + encodeURIComponent(airportCode));
+    
+    // Update danh sach chuyen bay hien tai
+    currentFlights = flights || [];
+    updateStatusBadges(computeStatusStats(currentFlights));
+    const filtered = filterFlightsByStatus(currentFlights, getSelectedStatuses());
+    updateVisibleCount(filtered.length);
+    renderFlights(filtered);
+  } catch (err) {
+    console.error(err);
+    currentFlights = [];
+    updateStatusBadges(computeStatusStats(currentFlights));
+    updateVisibleCount(0);
+    renderFlights([]);
+  }
 }
 
 // Wire up filter checkboxes
 document.addEventListener('DOMContentLoaded', () => {
-    loadCountriesAsia();
-    document.getElementById('countrySelect').addEventListener('change', onCountryChange);
-    const form = document.getElementById('searchForm');
-    if (form) form.addEventListener('submit', onSearch);
+  loadCountriesAsia();
+  document.getElementById('countrySelect').addEventListener('change', onCountryChange);
+  const form = document.getElementById('searchForm');
+  if (form) form.addEventListener('submit', onSearch);
 
-    document.getElementById('chkActive')?.addEventListener('change', onStatusFilterChange);
-    document.getElementById('chkLanded')?.addEventListener('change', onStatusFilterChange);
-    document.getElementById('chkScheduled')?.addEventListener('change', onStatusFilterChange);
+  document.getElementById('chkActive')?.addEventListener('change', onStatusFilterChange);
+  document.getElementById('chkLanded')?.addEventListener('change', onStatusFilterChange);
+  document.getElementById('chkScheduled')?.addEventListener('change', onStatusFilterChange);
 });
