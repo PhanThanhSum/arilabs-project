@@ -52,12 +52,12 @@ public class FlightScheduleService {
         List<FlightSchedule> cachedData = flightRepository.findByDepIataAndCreatedAtAfter(airportCode, timeThreshold);
 
         if (!cachedData.isEmpty()) {
-            System.out.println("--> Láº¥y dá»¯ liá»‡u tá»« DATABASE (Cache)");
+            System.out.println("--> Lấy dữ liệu từ DATABASE (Cache)");
             return cachedData;
         }
 
 
-        System.out.println("--> Gá»i AIRLABS API má»›i");
+        System.out.println("--> Gán API mới");
         return fetchFromApiAndSave(airportCode);
     }
 
