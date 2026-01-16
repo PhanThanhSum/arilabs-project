@@ -19,7 +19,7 @@ async function fetchJSON(url, options) {
 }
 
 // --- CẬP NHẬT HÀM LOAD QUỐC GIA ---
-async function loadCountriesAsia() {
+async function loadCountries() {
     const countrySelect = document.getElementById('countrySelect');
 
     // Bật loading
@@ -27,7 +27,7 @@ async function loadCountriesAsia() {
     countrySelect.innerHTML = '<option value="">-- Loading data... --</option>';
 
     try {
-        const countries = await fetchJSON('/api/countries?continent_id=AS');
+        const countries = await fetchJSON('/api/countries');
         countries.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
         // Xóa text "Đang tải" và thêm option mặc định
@@ -198,7 +198,7 @@ async function onSearch(e) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadCountriesAsia();
+    loadCountries();
 
     const countrySelect = document.getElementById('countrySelect');
     countrySelect.addEventListener('change', onCountryChange);

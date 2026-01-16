@@ -15,7 +15,8 @@ public class CountryController {
     private CountryService countryService;
 
     @GetMapping
-    public List<CountryDTO> getAll(@RequestParam(value = "continent_id") String continentId) {
-         return countryService.getByContinentId(continentId);
+    public List<CountryDTO> getAll() {
+        return countryService.getAll();
     }
+
 }

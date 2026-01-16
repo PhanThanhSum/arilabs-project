@@ -17,7 +17,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+
 
 import org.slf4j.Logger;
 
@@ -56,23 +56,18 @@ public class CountryService {
     @Value("${api-key-airlabs}")
     private String airlabsApiKey;
 
-    public List<CountryDTO> getByContinentId(String continentId) {
-        if (continentId == null || continentId.isBlank()) return null;
-
-        Continent continent = continentRepository.findById(continentId).orElse(null);
-        if (continent == null) {
-            continentRepository.save(new Continent(continentId));
-        }
-
-        List<Country> countries = countryRepository.findAllByContinent_Id(continentId);
-        if (countries.isEmpty()) {
-            countries = fetchAndSaveCountriesByContinent(continentId);
-        }
-        return countries
+    public List<CountryDTO> getAll() {
+        return countryRepository.findAll()
                 .stream()
-                .map(c -> new CountryDTO(c.getCode(), c.getCode3(), c.getName(), c.getContinent() != null ? c.getContinent().getId() : null))
-                .collect(Collectors.toList());
-    }
+                .map(c -> new CountryDTO(
+                        c.getCode(),
+                        c.getCode3(),
+                        c.getName(),
+                        c.getContinent() != null ? c.getContinent().getId() : null
+                ))
+                .toList();
+    }   
+
 
     private List<Country> fetchAndSaveCountriesByContinent(String continentId) {
         String url = String.format("https://airlabs.co/api/v9/countries?api_key=%s&continent=%s", airlabsApiKey, continentId);
