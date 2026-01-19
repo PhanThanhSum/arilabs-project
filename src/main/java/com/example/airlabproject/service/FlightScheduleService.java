@@ -139,7 +139,8 @@ public class FlightScheduleService {
             return flightRepository.saveAll(flightList);
 
         } catch (Exception e) {
-            return new ArrayList<>();
+            e.printStackTrace();
+            return List.of();
         }
     }
 
