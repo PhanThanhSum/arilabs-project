@@ -144,7 +144,7 @@ function renderFlights(flights) {
   for (const f of flights) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${f.airlineIata ?? '-'}</td>
+      <td>${f.airlineName ?? '-'}</td>
       <td>${f.flightIata ?? '-'}</td>
       <td>${f.depIata ?? '-'}</td>
       <td>${fmt(f.depTime)}</td>
