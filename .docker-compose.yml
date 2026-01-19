@@ -1,4 +1,4 @@
-version: "3.8"
+version: "3.9"
 
 services:
   mysql:
@@ -14,6 +14,7 @@ services:
       - mysql_data:/var/lib/mysql
 
   app:
+    build: .
     image: airlab-project:latest
     container_name: airlab-app
     depends_on:
