@@ -1,30 +1,10 @@
-version: "3.9"
-
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: mysql-airlab
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: Strong@Password123!
-      MYSQL_DATABASE: airlabsdb
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-
   app:
-    build: .
     image: airlab-project:latest
     container_name: airlab-app
-    depends_on:
-      - mysql
     ports:
-      - "8080:8080"
+      - "8081:8081"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/airlabsdb
+      SPRING_DATASOURCE_URL: jdbc:mysql://116.110.153.73:8080/airlabsdb
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: Strong@Password123!
-
-volumes:
-  mysql_data:
