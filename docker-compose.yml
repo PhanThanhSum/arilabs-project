@@ -18,3 +18,7 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
 
       API_KEY_AIRLABS: f562826f-8bc5-491e-af66-7014e9dc2458
+
+networks:
+    default:
+        driver: bridge
