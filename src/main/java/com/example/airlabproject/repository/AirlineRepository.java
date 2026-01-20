@@ -17,19 +17,33 @@ public interface AirlineRepository extends JpaRepository<Airline, Long> {
 
     Optional<Airline> findByIataCode(String iataCode);
 
+//    @Modifying
+//    @Transactional
+//    @Query(value =
+//            """
+//            INSERT INTO airline (iata_code, icao_code, name)
+//            VALUES (:iataCode, :icaoCode, :name)
+//            ON DUPLICATE KEY UPDATE
+//                name = :name,
+//                icao_code = :icaoCode
+//            """, nativeQuery = true)
+//    void upsertAirline(
+//            @Param("iataCode") String iataCode,
+//            @Param("icaoCode") String icaoCode,
+//            @Param("name") String name
+//    );
+
     @Modifying
     @Transactional
-    @Query(value =
-            """
+    @Query(value = """
             INSERT INTO airline (iata_code, icao_code, name)
             VALUES (:iataCode, :icaoCode, :name)
-            ON DUPLICATE KEY UPDATE
-                name = :name,
-                icao_code = :icaoCode
+            ON CONFLICT (iata_code)
+            DO UPDATE SET
+                name = EXCLUDED.name,
+                icao_code = EXCLUDED.icao_code
             """, nativeQuery = true)
-    void upsertAirline(
-            @Param("iataCode") String iataCode,
-            @Param("icaoCode") String icaoCode,
-            @Param("name") String name
-    );
+    void upsertAirline(@Param("iataCode") String iataCode,
+                       @Param("icaoCode") String icaoCode,
+                       @Param("name") String name);
 }

@@ -1,25 +1,20 @@
 package com.example.airlabproject.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-import java.time.LocalDateTime;
-
+@Getter
+@Setter
 @Entity
-@Data
 @Table(name = "airline")
 public class Airline {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
     private long id;
-
-    @Column(name = "name")
     private String name;
-
-    @Column(name="icaoCode")
     private String icaoCode;
 
-    @Column(name="iataCode", unique = true)
+    @Column(unique = true)
     private String iataCode;
 }

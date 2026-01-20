@@ -22,6 +22,7 @@ public class AirlabProjectApplication {
             if (airlineEmpty) {
                 System.out.println(" Fetching airlines from API...");
                 airlineService.AirlinesLoadDB();
+                System.out.println(" Fetch success...");
             }
         };
     }

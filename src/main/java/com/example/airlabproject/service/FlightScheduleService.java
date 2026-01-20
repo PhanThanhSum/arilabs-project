@@ -79,6 +79,7 @@ public class FlightScheduleService {
         );
     }
 
+    @Transactional
     public List<FlightScheduleDTO> getFlightsByAirportCode(String airportCode) {
         // Kiểm tra cache trước (30 phút)
         LocalDateTime timeThreshold = LocalDateTime.now().minusMinutes(30);

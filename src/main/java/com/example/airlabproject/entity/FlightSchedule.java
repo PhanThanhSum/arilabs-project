@@ -29,8 +29,4 @@ public class FlightSchedule {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
-
-    // ===== getters & setters =====
-    
-
 }
