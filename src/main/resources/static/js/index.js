@@ -119,7 +119,7 @@ function renderFlights(flights) {
   table.innerHTML = `
     <thead>
       <tr>
-        <th>Airline (IATA)</th>
+        <th>Airline</th>
         <th>Flight (IATA)</th>
         <th>Departure (IATA)</th>
         <th>Departure Time</th>
