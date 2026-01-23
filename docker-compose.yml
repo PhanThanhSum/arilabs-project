@@ -17,7 +17,7 @@ services:
       SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
 
-      API_KEY_AIRLABS: f562826f-8bc5-491e-af66-7014e9dc2458
+      API_KEY_AIRLABS: 30902306-ac71-41b0-a03d-475d5f1df007
 
 networks:
     default:
