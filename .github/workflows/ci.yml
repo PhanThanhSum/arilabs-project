@@ -36,23 +36,23 @@ jobs:
           docker push $IMAGE:$TAG
 
 
-  # deploy:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Deploy to EC2
-  #       uses: appleboy/ssh-action@v1
-  #       with:
-  #         host: ${{ secrets.EC2_IP }}
-  #         username: ubuntu
-  #         key: ${{ secrets.EC2_KEY }}
-  #         script: |
-  #           docker pull ${{ secrets.DOCKER_USERNAME }}/airlab:latest
-  #           docker stop airlab || true
-  #           docker rm airlab || true
-  #           docker run -d -p 80:8080 \
-  #             -e SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }} \
-  #             -e SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }} \
-  #             -e SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }} \
-  #             -e AIRLABS_KEY=${{ secrets.AIRLABS_KEY }} \
-  #             --name airlab ${{ secrets.DOCKER_USERNAME }}/airlab:latest
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_IP }}
+          username: ubuntu
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKER_USERNAME }}/airlab:latest
+            docker stop airlab || true
+            docker rm airlab || true
+            docker run -d -p 80:8080 \
+              -e SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }} \
+              -e SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }} \
+              -e SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }} \
+              -e AIRLABS_KEY=${{ secrets.AIRLABS_KEY }} \
+              --name airlab ${{ secrets.DOCKER_USERNAME }}/airlab:latest
