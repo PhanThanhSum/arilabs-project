@@ -19,18 +19,17 @@ jobs:
         run: mvn clean package -DskipTests
 
       - name: Login DockerHub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login \
-              -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+        # run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login \
+        #       -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
 
       - name: Build & Push image (latest + commit SHA)
         run: |
           TAG=${GITHUB_SHA::7}
           IMAGE=${{ secrets.DOCKER_USERNAME }}/airlab
 
-          docker build \
-            -t $IMAGE:latest \
-            -t $IMAGE:$TAG \
-            .
+          docker build -t $IMAGE:latest -t $IMAGE:$TAG .
 
           docker push $IMAGE:latest
           docker push $IMAGE:$TAG
