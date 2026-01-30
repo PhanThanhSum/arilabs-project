@@ -27,9 +27,8 @@ jobs:
           TAG=${GITHUB_SHA::7}
           IMAGE=${{ secrets.DOCKER_USERNAME }}/airlab
 
-          docker build -t $IMAGE:latest -t $IMAGE:$TAG .
+          docker build -t $IMAGE:$TAG .
 
-          docker push $IMAGE:latest
           docker push $IMAGE:$TAG
 
 
