@@ -1,0 +1,10 @@
+target/*
+!target/*.jar
+.git/
+.gitignore
+README.md
+Dockerfile
+.dockerignore
+**/*.iml
+.idea/
+node_modules/
