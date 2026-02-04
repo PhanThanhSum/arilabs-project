@@ -11,3 +11,10 @@ services:
       SPRING_DATASOURCE_PASSWORD: 0YtGGV2K2o4SNILlUsBBIIdUS6G24q3F
     env_file:
       - .env
+  nats:
+    image: nats:latest
+    container_name: nats
+    command: ["-js", "-m", "8222"]
+    ports:
+      - "4222:4222"   # client
+      - "8222:8222"   # monitoring
